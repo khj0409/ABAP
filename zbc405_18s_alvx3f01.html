@@ -1,0 +1,161 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZBC405_18S_ALVX3F01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"> <b>Code listing for: ZBC405_18S_ALVX3F01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"> <b>Description:  Include ZBC405_18S_ALV6F01</b></font>
+<hr>
+<pre width="150">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZBC405_18S_ALV6F01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& --&gt;  p1        text</font>
+<font color ="#0000FF">*& &lt;--  p2        text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM init_data .
+
+  "SQL
+  "FROM : SFLIGHT
+  "FIELDS: *
+  "KEY : from selection options
+  "TARGET : table...
+  "VERSION: 7.0
+
+  SELECT *
+    FROM sflight
+    WHERE carrid IN @so_car
+    AND connid IN @so_con
+    INTO CORRESPONDING FIELDS OF TABLE @gt_flight.
+
+  IF sy-subrc &lt;&gt; 0.
+
+   MESSAGE e001(zbc405_18).
+
+  ELSE.
+
+    MESSAGE s002(zbc405_18).
+
+  ENDIF.
+<font color ="#0000FF">* Exception LED</font>
+  LOOP AT gt_flight into gs_sflight.
+
+    IF gs_sflight-seatsocc &lt; 5.
+
+       gs_sflight-light = '1'.
+
+    ELSEIF gs_sflight-seatsocc &lt; 100.
+
+      gs_sflight-light  = '2'.
+
+    else. gs_sflight-light = '3'.
+
+    ENDIF.
+
+     "Color.
+    IF gs_sflight-planetype = '747-400'.
+
+      gs_sflight-color = 'C610'.
+    ENDIF.
+
+    "Cell Color.
+    IF gs_sflight-planetype = 'A380-800'.
+      gs_colfields-fname = 'PLANETYPE'.
+      gs_colfields-color-col = '7'.
+      gs_colfields-color-int = '1'.
+      gs_colfields-color-inv = '0'.
+
+      APPEND gs_colfields TO gs_sflight-it_colfields.
+    ENDIF.
+
+    IF gs_sflight-fldate &lt; sy-datum.
+      gs_sflight-changes_possible = icon_space.
+    ELSE.
+      gs_sflight-changes_possible = icon_okay.
+    ENDIF.
+
+<font color ="#0000FF">*light color만 update.</font>
+    MODIFY gt_flight FROM gs_sflight TRANSPORTING light
+                                                   color
+                                                   it_colfields
+                                                   changes_possible.
+   ENDLOOP.
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form free_control_resources</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& --&gt;  p1        text</font>
+<font color ="#0000FF">*& &lt;--  p2        text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM free_control_resources .
+  CALL METHOD go_alv_grid-&gt;free.
+
+  CALL METHOD go_container-&gt;free.
+
+  FREE: go_alv_grid, go_container.
+
+
+ENDFORM.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Form calculate_summary</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& --&gt;  p1        text</font>
+<font color ="#0000FF">*& &lt;--  p2        text</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+FORM calculate_summary .
+TYPES: BEGIN OF ty_group,
+           carrid TYPE sflight-carrid,
+           seatsmax TYPE sflight-seatsmax,
+           seatsocc TYPE sflight-seatsocc,
+         END OF ty_group.
+
+  DATA: lt_temp TYPE TABLE OF ty_group,
+        ls_temp TYPE ty_group.
+
+  " 데이터 복사
+  LOOP AT gt_flight INTO gs_sflight.
+    ls_temp-carrid = gs_sflight-carrid.
+    ls_temp-seatsmax = gs_sflight-seatsmax.
+    ls_temp-seatsocc = gs_sflight-seatsocc.
+    APPEND ls_temp TO lt_temp.
+  ENDLOOP.
+
+  " 집계: CARRID 기준 그룹핑
+  DATA: lt_grouped TYPE SORTED TABLE OF ty_group
+                   WITH UNIQUE KEY carrid,
+        lv_count   TYPE i,
+        lv_total_util TYPE p DECIMALS 2.
+
+  CLEAR: gt_summary.
+
+  LOOP AT lt_temp INTO ls_temp.
+    READ TABLE gt_summary INTO gs_summary WITH KEY carrid = ls_temp-carrid.
+    IF sy-subrc = 0.
+      gs_summary-seatsmax_sum += ls_temp-seatsmax.
+      gs_summary-utilization_avg += ( ls_temp-seatsocc * 100 ) / ls_temp-seatsmax.
+      lv_count += 1.
+      MODIFY gt_summary FROM gs_summary TRANSPORTING seatsmax_sum utilization_avg WHERE carrid = gs_summary-carrid.
+    ELSE.
+      gs_summary-carrid = ls_temp-carrid.
+      gs_summary-seatsmax_sum = ls_temp-seatsmax.
+      gs_summary-utilization_avg = ( ls_temp-seatsocc * 100 ) / ls_temp-seatsmax.
+      APPEND gs_summary TO gt_summary.
+    ENDIF.
+
+  ENDLOOP.
+
+ENDFORM.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3 - E.G.Mellodew. 1998-2004 UK. Sap Release 757
+</font>
+</body>
+</html>

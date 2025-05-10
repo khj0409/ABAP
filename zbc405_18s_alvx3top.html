@@ -1,0 +1,94 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZBC405_18S_ALVX3TOP</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"> <b>Code listing for: ZBC405_18S_ALVX3TOP</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"> <b>Description:  Include ZBC405_18S_ALV6TOP</b></font>
+<hr>
+<pre width="150">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZBC405_18S_ALV6TOP</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+TYPE-POOLS: col, icon.
+
+
+" 0. Top Variables.
+data: ok_code type sy-ucomm.
+
+TYPES: BEGIN OF gty_flight.
+         INCLUDE TYPE sflight.
+TYPES:   light TYPE c LENGTH 1,
+         color        TYPE c LENGTH 4,
+         it_colfields TYPE lvc_t_scol,
+         changes_possible TYPE icon-id,
+       END OF gty_flight.
+
+<font color ="#0000FF">*3. Layout Variant</font>
+DATA: gs_variant TYPE disvariant,
+      gv_save    TYPE c LENGTH 1.
+
+<font color ="#0000FF">*4. Layout</font>
+DATA: gs_layout  TYPE lvc_s_layo.
+
+" 1. Selection screen.
+DATA: gt_sort TYPE lvc_t_sort,
+      gs_sort TYPE lvc_s_sort.
+
+<font color ="#0000FF">* Exclude Std. Function.</font>
+DATA: gt_excluded_functions TYPE ui_functions.
+
+DATA: gs_sflight TYPE gty_flight,
+      gt_flight TYPE TABLE OF gty_flight.
+
+DATA: gs_colfields LIKE LINE OF gs_sflight-it_colfields.
+
+DATA: gt_field_cat TYPE lvc_t_fcat,
+      gs_field_cat TYPE lvc_s_fcat.
+
+SELECTION-SCREEN BEGIN OF BLOCK blk1 WITH FRAME TITLE TEXT-001.
+
+  SELECT-OPTIONS: so_car FOR gs_sflight-carrid,
+                  so_con FOR gs_sflight-connid.
+<font color ="#0000FF">*  PARAMETERS:     pa_lv  TYPE disvariant-variant.</font>
+SELECTION-SCREEN END OF BLOCK blk1.
+
+
+" 2. Data Object.
+
+"객체변수 선언.
+DATA: go_container TYPE REF TO cl_gui_custom_container,
+      go_alv_grid  TYPE REF TO cl_gui_alv_grid.
+
+
+<font color ="#0000FF">********Screen 200</font>
+
+
+TYPES: BEGIN OF gty_flight_summary,
+         carrid      TYPE sflight-carrid,
+         seatsmax_sum TYPE i,
+         utilization_avg TYPE p DECIMALS 2,
+       END OF gty_flight_summary.
+
+DATA: gt_summary TYPE TABLE OF gty_flight_summary,
+      gs_summary TYPE gty_flight_summary.
+
+
+DATA: go_container_200 TYPE REF TO cl_gui_custom_container,
+      go_alv_grid_200 TYPE REF TO cl_gui_alv_grid.
+
+DATA: gt_fieldcat_200 TYPE lvc_t_fcat,
+      gs_layout_200 TYPE lvc_s_layo.
+
+DATA: gt_recommend TYPE TABLE of sflight  WITH EMPTY KEY.
+DATA: go_container_210 TYPE REF TO cl_gui_custom_container,
+      go_alv_grid_210 TYPE REF TO cl_gui_alv_grid,
+      gs_alv_grid_210 TYPE lvc_s_layo.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3 - E.G.Mellodew. 1998-2004 UK. Sap Release 757
+</font>
+</body>
+</html>

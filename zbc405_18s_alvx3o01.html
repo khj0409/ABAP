@@ -1,0 +1,267 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title>ZBC405_18S_ALVX3O01</title>
+</head>
+<body bgcolor="#FFFFE0">
+<font size="3" face = "Arial" color="#000000"> <b>Code listing for: ZBC405_18S_ALVX3O01</b></font>
+<br>
+<font size="3" face = "Arial" color="#000000"> <b>Description:  Include ZBC405_18S_ALV6O01</b></font>
+<hr>
+<pre width="150">
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Include          ZBC405_18S_ALV6O01</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0100 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0100 OUTPUT.
+ SET PF-STATUS 'S100'.
+ SET TITLEBAR 'T100'.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module CREATE_AND_TRANSFER OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE create_and_transfer OUTPUT.
+
+  IF go_container IS INITIAL.
+
+
+    "   1. Custom Container OBject 생성: Screen &lt;---- Container 서로 연결.
+    CREATE OBJECT go_container
+      EXPORTING
+        "Screen 100번 Layout에서 만든 Custom Container name.
+        container_name              = 'ALV'
+      EXCEPTIONS
+        cntl_error                  = 1
+        cntl_system_error           = 2
+        create_error                = 3
+        lifetime_error              = 4
+        lifetime_dynpro_dynpro_link = 5
+        OTHERS                      = 6.
+    IF sy-subrc &lt;&gt; 0.
+
+      MESSAGE e010(zbc405_18alv).
+
+    ELSE.
+
+      MESSAGE s020(zbc405_18alv).
+
+    ENDIF.
+
+    "   2. ALV Grid Control 생성.
+
+    " ALV Grid 객체 생성
+      CREATE OBJECT go_alv_grid
+        EXPORTING
+          i_parent          = go_container
+        EXCEPTIONS
+          error_cntl_create = 1
+          error_cntl_init   = 2
+          error_cntl_link   = 3
+          error_dp_create   = 4
+          OTHERS            = 5.
+      IF sy-subrc &lt;&gt; 0.
+        MESSAGE e011(zbc405_18alv).
+      ELSE.
+        MESSAGE s021(zbc405_18alv).
+      ENDIF.
+
+      " 이벤트 핸들러 객체 생성 (한 번만 생성)
+      IF go_event_handler IS INITIAL.
+        CREATE OBJECT go_event_handler.
+      ENDIF.
+
+      " 더블클릭 이벤트 핸들러 등록
+      SET HANDLER go_event_handler-&gt;handle_double_click FOR go_alv_grid.
+
+
+<font color ="#0000FF">*    1. Layout variant replaced by Input help PAI event.</font>
+<font color ="#0000FF">*    gs_variant-report  = sy-cprog.</font>
+<font color ="#0000FF">*    gs_variant-variant = pa_lv.</font>
+    gv_save            = 'A'.  "U, X, A
+
+<font color ="#0000FF">*  2. Layout</font>
+    gs_layout-grid_title = 'SFLIGHT ALV Display'.
+    gs_layout-zebra      = 'X'.
+    gs_layout-cwidth_opt = 'X'.
+<font color ="#0000FF">*    gs_layout-no_headers = 'X'.</font>
+    gs_layout-sel_mode   = 'A'.
+    gs_layout-excp_fname = 'LIGHT'.
+    gs_layout-excp_led   = 'X'.
+    gs_layout-info_fname = 'COLOR'.
+    gs_layout-ctab_fname = 'IT_COLFIELDS'.
+
+    gs_sort-fieldname = 'FLDATE'.
+    gs_sort-spos = 1.
+    gs_sort-down = 'X'.
+    APPEND gs_sort TO gt_sort.
+    clear gs_sort.
+
+    gs_sort-fieldname = 'SEATSMAX'.
+    gs_sort-spos = 2.
+    gs_sort-down = 'X'.
+    APPEND gs_sort TO gt_sort.
+    clear gs_sort.
+
+<font color ="#0000FF">*  fill field catalog.</font>
+    gs_field_cat-fieldname = 'SEATSOCC'.
+    gs_field_cat-do_sum    = 'X'.
+    APPEND gs_field_cat TO gt_field_cat.
+
+    CLEAR gs_field_cat.
+    gs_field_cat-fieldname = 'PARAMENTSUM'.
+    gs_field_cat-no_out    = 'X'.
+    APPEND gs_field_cat TO gt_field_cat.
+
+    CLEAR gs_field_cat.
+    gs_field_cat-fieldname = 'LIGHT'.
+    gs_field_cat-coltext   = 'Utilization'(h02).
+    APPEND gs_field_cat TO gt_field_cat.
+
+    CLEAR gs_field_cat.
+    gs_field_cat-fieldname = 'CHANGES_POSSIBLE'.
+    gs_field_cat-col_pos   = 5.
+    gs_field_cat-coltext   = 'Changes possible'(h03).
+    gs_field_cat-tooltip   = 'Are changes possible?'(t01).
+    APPEND gs_field_cat TO gt_field_cat.
+
+     " Exclude. Function.
+    APPEND cl_gui_alv_grid=&gt;mc_fc_filter TO gt_excluded_functions.
+    APPEND cl_gui_alv_grid=&gt;mc_mb_sum TO gt_excluded_functions.
+
+    " 3. Method : set_Table_for_first_display
+    CALL METHOD go_alv_grid-&gt;set_table_for_first_display
+      EXPORTING
+        " subroutine 'init_data'에서 SQL 해오는 from과 타겟 gt_flight
+        i_structure_name = 'SFLIGHT'
+        is_variant       = gs_variant
+        i_save           = gv_save
+<font color ="#0000FF">*       is_default       = 'X'</font>
+        is_layout        = gs_layout
+        it_toolbar_excluding = gt_excluded_functions
+      CHANGING
+        it_fieldcatalog  = gt_field_cat
+        it_outtab        = gt_flight
+        it_sort          = gt_sort.
+
+     IF sy-subrc &lt;&gt; 0.
+        " 로그 기록: SY-SUBRC 값과 관련 정보를 출력
+
+        MESSAGE e001(zbc405_18alv) WITH  sy-subrc.
+     ENDIF.
+
+<font color ="#0000FF">*       IF go_event_handler IS INITIAL.</font>
+<font color ="#0000FF">*       CREATE OBJECT go_event_handler.</font>
+<font color ="#0000FF">*       SET HANDLER go_event_handler-&gt;handle_double_click FOR go_alv_grid.</font>
+<font color ="#0000FF">*       ENDIF.</font>
+
+  ENDIF.
+
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0200 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0200 OUTPUT.
+ SET PF-STATUS 'S200'.
+ SET TITLEBAR 'T200'.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module BUILD_ALV_200 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE build_alv_200 OUTPUT.
+IF go_container_200 IS INITIAL.
+
+    CREATE OBJECT go_container_200
+      EXPORTING container_name = 'ALV_SUMMARY'.
+
+    CREATE OBJECT go_alv_grid_200
+      EXPORTING i_parent = go_container_200.
+
+    " 필드 카탈로그 설정
+    CLEAR: gt_fieldcat_200.
+    DATA: ls_fcat TYPE lvc_s_fcat.
+
+    ls_fcat-fieldname = 'CARRID'.
+    ls_fcat-coltext = '항공사'.
+    APPEND ls_fcat TO gt_fieldcat_200.
+    CLEAR ls_fcat.
+
+    ls_fcat-fieldname = 'SEATSMAX_SUM'.
+    ls_fcat-coltext = '총 좌석 수'.
+    ls_fcat-do_sum = 'X'.
+    APPEND ls_fcat TO gt_fieldcat_200.
+    CLEAR ls_fcat.
+
+    ls_fcat-fieldname = 'UTILIZATION_AVG'.
+    ls_fcat-coltext = '점유율 평균(%)'.
+    APPEND ls_fcat TO gt_fieldcat_200.
+    CLEAR ls_fcat.
+
+    " 레이아웃
+    gs_layout_200-grid_title = '항공사별 좌석 집계'.
+    gs_layout_200-zebra = 'X'.
+
+    CALL METHOD go_alv_grid_200-&gt;set_table_for_first_display
+      EXPORTING
+        is_layout       = gs_layout_200
+      CHANGING
+        it_fieldcatalog = gt_fieldcat_200
+        it_outtab       = gt_summary.
+
+  ENDIF.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module STATUS_0210 OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE status_0210 OUTPUT.
+ SET PF-STATUS 'S210'.
+ SET TITLEBAR 'T210'.
+ENDMODULE.
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*& Module DISPLAY_RECOMMEND_ALV OUTPUT</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+<font color ="#0000FF">*&</font>
+<font color ="#0000FF">*&---------------------------------------------------------------------*</font>
+MODULE display_recommend_alv OUTPUT.
+
+  IF go_container_210 IS INITIAL.
+    CREATE OBJECT go_container_210
+      EXPORTING container_name = 'ALV_RECOMMEND'.
+
+    CREATE OBJECT go_alv_grid_210
+      EXPORTING i_parent = go_container_210.
+
+    gs_alv_grid_210-grid_title = '다음 예약 추천'.
+
+    CALL METHOD go_alv_grid_210-&gt;set_table_for_first_display
+      EXPORTING
+        i_structure_name = 'SFLIGHT'
+        is_layout        = gs_alv_grid_210
+      CHANGING
+        it_outtab = gt_recommend.
+  ELSE.
+    " 데이터가 바뀌었을 때 ALV를 새로고침
+    CALL METHOD go_alv_grid_210-&gt;refresh_table_display.
+
+
+  ENDIF.
+
+
+ENDMODULE.
+</pre>
+<hr>
+<font size="2" face = "Sans Serif">Extracted by Direct Download Enterprise version 1.3 - E.G.Mellodew. 1998-2004 UK. Sap Release 757
+</font>
+</body>
+</html>
